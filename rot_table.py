@@ -22,5 +22,5 @@ def stop():
     print(out.json())
 
 def get_state():
-    out = send_command(dados)
+    out = send_command("dados")
     print(out.json())
