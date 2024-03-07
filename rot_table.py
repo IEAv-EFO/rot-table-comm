@@ -1,6 +1,6 @@
 import requests
 
-api_addr = "http://127.0.0.1:8088/api/"
+api_addr = "http:/192.168.1.10:8081/api/"
 str_json_request = ".json?"
 
 def send_command(command="getConfig"):
@@ -18,6 +18,6 @@ def send_vel(pitch, yaw, command="executaJog"):
     print(out.json())
 
 def stop():
-    out = requests.get("http://127.0.0.1:8088/api/executaParar.json?")
+    out = requests.get(f"{api_addr}executaParar{str_json_request}")
     print(out.json())
 
