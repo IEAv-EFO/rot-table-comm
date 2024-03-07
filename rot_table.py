@@ -21,3 +21,6 @@ def stop():
     out = requests.get(f"{api_addr}executaParar{str_json_request}")
     print(out.json())
 
+def get_state():
+    out = send_command(dados)
+    print(out.json())
