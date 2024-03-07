@@ -2,6 +2,9 @@
 # 
 # The server has to be running in any computer connected to the table network switch
 # the api_addr is the address and port of this server.
+#
+# author: Gabriel Nunes 
+# email: nunesgfs@gmail.com
 
 
 import requests
