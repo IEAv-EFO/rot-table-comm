@@ -40,7 +40,7 @@ class RotTableComm(object):
         if _pos < 0:
             _pos = 360_000 - abs(_pos)
 
-        self.write_register(address_reg=26, reg_value=2)
+        self.write_register(address_reg=22, reg_value=2) # IMPORTANT: probably this registrar abilisates the position of position control 
         self.write_register(address_reg=26, reg_value=0)
         # split _pos values of 32 bits in two 16 bits to write on register
         _msb_pos = _pos >> 16
