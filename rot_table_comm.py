@@ -17,10 +17,10 @@ class RotTableComm(object):
             print("Fail to open connection")
         self.client.close()
         # ge current states
-        self.get_tilt_position()
-        self.get_tilt_velocity()
-        self.get_azimute_position()
-        self.get_azimute_velocity()
+        self.get_roll_position()
+        self.get_roll_velocity()
+        self.get_yaw_position()
+        self.get_yaw_velocity()
 
     def write_register(self, address_reg: ctypes.c_int, reg_value: ctypes.c_int16):
         if not self.client.open():
@@ -30,11 +30,11 @@ class RotTableComm(object):
         self.client.write_single_register(address_reg, reg_value)
         self.client.close()
 
-    def set_tilt_position(self, pos:ctypes.c_int32,ensure_position=True):
-        """set_tilt_position
+    def set_roll_position(self, pos:ctypes.c_int32,ensure_position=True):
+        """set_roll_position
 
         Args:
-            pos: angle of tilt  in degrees. Defaults to ctypes.c_int32.
+            pos: angle of roll  in degrees. Defaults to ctypes.c_int32.
         """
         _pos = pos * 1_000
         if _pos < 0:
@@ -53,18 +53,18 @@ class RotTableComm(object):
         self.write_register(address_reg=26, reg_value=4)
         # update position variable
         
-        self.tilt_position = self.get_tilt_position()
+        self.roll_position = self.get_roll_position()
         # Check that the table is in the requested position
         if ensure_position:
-            sleep(2)
-            while abs(self.tilt_position - pos) > 1:
-                self.set_tilt_position(pos=pos, ensure_position=False)
+            while abs(self.roll_position - pos) > 1:
+                sleep(2)    
+                self.set_roll_position(pos=pos, ensure_position=False)
 
-    def set_azimute_position(self, pos:ctypes.c_int32, ensure_position=False):
-        """set_azimute_position
+    def set_yaw_position(self, pos:ctypes.c_int32, ensure_position=False):
+        """set_yaw_position
 
         Args:
-            pos: azimute position in degree. Defaults to ctypes.c_int32.
+            pos: yaw position in degree. Defaults to ctypes.c_int32.
         """
         _pos = pos * 1_000
         if _pos < 0:
@@ -81,28 +81,28 @@ class RotTableComm(object):
         self.write_register(address_reg=28, reg_value=4)  
         sleep(0.1)
         # update position variable
-        self.azimute_position = self.get_azimute_position()
+        self.yaw_position = self.get_yaw_position()
         # Check that the table is in the requested position
         if ensure_position:
-            sleep(2)
-            while abs(self.azimute_position-pos)>1:
-                self.set_azimute_position(pos=pos,ensure_position=False)
+            while abs(self.yaw_position-pos)>1:
+                self.set_yaw_position(pos=pos,ensure_position=False)
+                sleep(2)
 
-    def get_azimute_position(self):
+    def get_yaw_position(self):
         _pos_list = self.client.read_input_registers(0, 2)
-        self.azimute_position = (((_pos_list[1] << 16) + _pos_list[0])) / 1_000_000
-        return self.azimute_position
-    def get_azimute_velocity(self):
+        self.yaw_position = (((_pos_list[1] << 16) + _pos_list[0])) / 1_000_000
+        return self.yaw_position
+    def get_yaw_velocity(self):
         _pos_list = self.client.read_input_registers(2, 2)
-        self.azimute_velocity = (((_pos_list[1] << 16) + _pos_list[0])) / 1_000_000
-        return self.azimute_velocity
+        self.yaw_velocity = (((_pos_list[1] << 16) + _pos_list[0])) / 1_000_000
+        return self.yaw_velocity
 
-    def get_tilt_position(self):
+    def get_roll_position(self):
         _pos_list = self.client.read_input_registers(4, 2)
-        self.tilt_position = (((_pos_list[1] << 16) + _pos_list[0])) / 1_000_000
-        return self.tilt_position
+        self.roll_position = (((_pos_list[1] << 16) + _pos_list[0])) / 1_000_000
+        return self.roll_position
 
-    def get_tilt_velocity(self):
+    def get_roll_velocity(self):
         _pos_list = self.client.read_input_registers(6, 2)
-        self.tilt_velocity = (((_pos_list[1] << 16) + _pos_list[0])) / 1_000_000
-        return self.tilt_velocity
+        self.roll_velocity = (((_pos_list[1] << 16) + _pos_list[0])) / 1_000_000
+        return self.roll_velocity
