@@ -9,3 +9,5 @@ The functions can be found in the source code file `mesa.c`.
 Run the following command to install the required packages:
 
 `pip install -r requirements.txt`
+# TODO
+- implementation of velocity methods

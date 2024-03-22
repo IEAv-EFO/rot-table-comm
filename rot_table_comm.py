@@ -106,3 +106,6 @@ class RotTableComm(object):
         _pos_list = self.client.read_input_registers(6, 2)
         self.roll_velocity = (((_pos_list[1] << 16) + _pos_list[0])) / 1_000_000
         return self.roll_velocity
+    def go_home(self):
+        self.set_roll_position(0)
+        self.set_yaw_position(0)
