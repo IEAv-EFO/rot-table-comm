@@ -1,1 +1,2 @@
-requests >= 2.20
+pyModbusTCP==0.2.1
+pyModbusTCP==0.2.1
