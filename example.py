@@ -6,7 +6,7 @@
 @Author  :   Roney D. Silva
 @Contact :   roneyddasilva@gmail.com
 '''
-from rot_table_comm import RotTableComm 
+from rot_table_comm.rot_table_comm import RotTableComm 
 rt = RotTableComm()
 # to put rot table with roll in 45 degree and yaw with 90 degree with can do:
 rt.set_roll_position(45)

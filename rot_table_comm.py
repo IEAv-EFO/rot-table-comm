@@ -17,10 +17,10 @@ class RotTableComm(object):
             print("Fail to open connection")
         self.client.close()
         # ge current states
-        self.get_roll_position()
-        self.get_roll_velocity()
-        self.get_yaw_position()
-        self.get_yaw_velocity()
+        # self.get_roll_position()
+        # self.get_roll_velocity()
+        # self.get_yaw_position()
+        # self.get_yaw_velocity()
 
     def write_register(self, address_reg: ctypes.c_int, reg_value: ctypes.c_int16):
         if not self.client.open():
