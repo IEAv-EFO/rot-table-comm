@@ -13,9 +13,9 @@ class RotTableComm(object):
             host: ip of rot table. Defaults to "192.168.1.1".
             port: port number of connection. Defaults to 502.
         """
-        self.max_acc = 10_000.0
-        self.max_roll_vel = 20_000.0 
-        self.max_yaw_vel = 50_000.0
+        self.max_acc = 10_000
+        self.max_roll_vel = 20_000 
+        self.max_yaw_vel = 50_000
         self.client = ModbusClient(host=host, port=port)
         if not self.client.open():
             print("Fail to open connection")
@@ -36,7 +36,7 @@ class RotTableComm(object):
         self.client.close()
 
     def set_roll_acc(self, acc=None):
-        if acc == None:
+        if acc is None:
             acc = self.max_acc
         self.write_register(40, acc)
         self.write_register(42, acc)
@@ -54,7 +54,7 @@ class RotTableComm(object):
             self.write_register(26, 2)
   
     def set_yaw_acc(self, acc=None):
-        if acc == None:
+        if acc is None:
             acc = self.max_acc
         self.write_register(50, acc)
         self.write_register(52, acc)
@@ -144,7 +144,7 @@ class RotTableComm(object):
                 sleep(2)
 
     def velocity_roll(self, vel=0, acc=None):
-        if acc == None:
+        if acc is None:
             acc = self.max_acc
         self.set_roll_acc(acc)
         self.write_register(22, 0)
@@ -154,7 +154,7 @@ class RotTableComm(object):
         self.write_register(24, 1)
     
     def velocity_yaw(self, vel=0, acc=None):
-        if acc == None:
+        if acc is None:
             acc = self.max_acc
         self.set_yaw_acc(acc)
         self.write_register(22, 0)
