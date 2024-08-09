@@ -3,7 +3,12 @@ import ctypes
 from time import sleep
 
 class RotTableComm(object):
-    """docstring for RotTableComm."""
+    """
+    Class used to communicate with the Inphax rotary table from IEAv.
+
+    The table's firmware is programmed in a PLC and communicates via modbus protocol, 
+    via ethernel cable.
+    """
     
 
     def __init__(self, host="192.168.1.1", port=502):
@@ -13,33 +18,55 @@ class RotTableComm(object):
             host: ip of rot table. Defaults to "192.168.1.1".
             port: port number of connection. Defaults to 502.
         """
+
+        # rotary table fixed values
         self.max_acc = 10_000
         self.max_roll_vel = 20_000 
         self.max_yaw_vel = 50_000
+
+
         self.client = ModbusClient(host=host, port=port)
         if not self.client.open():
-            print("Fail to open connection")
+            print("Connection Failed!")
         self.client.close()
-        # ge current states
-        # self.get_roll_position()
-        # self.get_roll_velocity()
-        # self.get_yaw_position()
-        # self.get_yaw_velocity()
+        return 200
+
 
 
     def write_register(self, address_reg: ctypes.c_int, reg_value: ctypes.c_int16):
         if not self.client.open():
-            print('fail to open')
-
+            print("Connection failed!")
+            
         # sleep(.1)
         self.client.write_single_register(address_reg, reg_value)
         self.client.close()
 
-    def set_roll_acc(self, acc=None):
-        if acc is None:
-            acc = self.max_acc
-        self.write_register(40, acc)
-        self.write_register(42, acc)
+    # Primary functions
+    # These functions are results from the reverse engineering and tests
+    # on the PLC registers and its possible values.
+    def stop_emergency(self, status=4): # @test
+        """ 0: reset status  4: stop immediately """
+        self.write_register(20, status)
+        sleep(0.1)
+        self.write_register(20, 0)
+
+    def move_roll(self, status=0): # @test
+        """ 0: off  1: on """
+        self.write_register(22, status)
+    
+    def move_yaw(self, status=0):
+        """ 0: off  1: on """
+        self.write_register(24, status)
+
+    def set_direction_roll(self, direction=0): # @test value 4
+        """ 0: off  1: positive 2: negative """
+        self.write_register(26, direction)
+
+    def set_direction_yaw(self, direction=0):
+        """ 0: off  1: positive 2: negative """
+        self.write_register(28, direction)
+
+
 
     def set_roll_vel(self, vel=0):
         if abs(vel) > self.max_roll_vel:
@@ -49,15 +76,21 @@ class RotTableComm(object):
                 vel = -self.max_roll_vel
         self.write_register(46, abs(vel*100))
         if vel > 0.0:
-            self.write_register(26, 1)
+            self.set_direction_roll(1)
+        elif vel < 0.0:
+            self.set_direction_roll(2)
         else:
-            self.write_register(26, 2)
-  
-    def set_yaw_acc(self, acc=None):
+            self.set_direction_roll(0)
+
+
+
+    def set_roll_acc(self, acc=None):
         if acc is None:
             acc = self.max_acc
-        self.write_register(50, acc)
-        self.write_register(52, acc)
+        self.write_register(40, acc) # roll acceleration
+        self.write_register(42, acc) # maximum roll acceleration
+
+
         
     def set_yaw_vel(self, vel=0):
         if abs(vel) > self.max_yaw_vel:
@@ -67,23 +100,43 @@ class RotTableComm(object):
                 vel = -self.max_yaw_vel
         self.write_register(56, abs(vel*100))
         if vel > 0.0:
-            self.write_register(26, 1)
+            self.set_direction_yaw(1)
+        elif vel <0.0:
+            self.set_direction_yaw(2)
         else:
-            self.write_register(26, 2)
+            self.set_direction_yaw(0)
+            
 
-    def stop(self):
-        self.write_register(22, 1)
-        self.write_register(24, 1)
+
+    def set_yaw_acc(self, acc=None):
+        if acc is None:
+            acc = self.max_acc
+        self.write_register(50, acc) # yaw acceleration
+        self.write_register(52, acc) # maximum acceleration
+
+
+
+    def stop(self): # @test
+        """
+            Non-emergencial stop.
+        """
+        self.move_roll(1)
+        self.move_yaw(1)
 
         # stop roll movement
-        self.write_register(26, 0) # roll movement off
+        self.set_direction_roll(0)
         self.set_roll_acc(self.max_acc)
         self.set_roll_vel(0)
 
         # stop yaw movement
-        self.write_register(28, 0)
+        self.set_direction_yaw(0)
         self.set_yaw_acc(self.max_acc)
         self.set_yaw_vel(0)
+
+        self.move_roll(0)
+        self.move_yaw(0)
+        
+
 
     def set_roll_position(self, pos:ctypes.c_int32, ensure_position=True):
         """set_roll_position
@@ -143,27 +196,20 @@ class RotTableComm(object):
                 self.set_yaw_position(pos=pos,ensure_position=False)
                 sleep(2)
 
-    def velocity_roll(self, vel=0, acc=None):
+    def jog_roll(self, vel=0, acc=None):
         if acc is None:
             acc = self.max_acc
-        self.set_roll_acc(acc)
-        self.write_register(22, 0)
-        self.write_register(24, 0)
         self.set_roll_vel(vel)
-        self.write_register(22, 1)
-        self.write_register(24, 1)
+        self.set_roll_acc(acc)
+        self.move_roll(1)
+
     
-    def velocity_yaw(self, vel=0, acc=None):
+    def jog_yaw(self, vel=0, acc=None):
         if acc is None:
             acc = self.max_acc
-        self.set_yaw_acc(acc)
-        self.write_register(22, 0)
-        self.write_register(24, 0)
-        # check maximum allowed velocity
         self.set_yaw_vel(vel)
-            
-        self.write_register(22, 1)
-        self.write_register(24, 1)
+        self.set_yaw_acc(acc)
+        self.move_yaw(1)
         
 
     def get_yaw_position(self):
