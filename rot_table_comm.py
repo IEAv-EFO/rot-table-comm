@@ -143,7 +143,9 @@ class RotTableComm(object):
                 self.set_yaw_position(pos=pos,ensure_position=False)
                 sleep(2)
 
-    def velocity_roll(self, vel=0, acc=self.max_acc):
+    def velocity_roll(self, vel=0, acc=None):
+        if acc == None:
+            acc = self.max_acc
         self.set_roll_acc(acc)
         self.write_register(22, 0)
         self.write_register(24, 0)
@@ -151,7 +153,9 @@ class RotTableComm(object):
         self.write_register(22, 1)
         self.write_register(24, 1)
     
-    def velocity_yaw(self, vel=0, acc=max_acc):
+    def velocity_yaw(self, vel=0, acc=None):
+        if acc == None:
+            acc = self.max_acc
         self.set_yaw_acc(acc)
         self.write_register(22, 0)
         self.write_register(24, 0)
