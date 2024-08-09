@@ -30,7 +30,7 @@ class RotTableComm(object):
         self.client.write_single_register(address_reg, reg_value)
         self.client.close()
 
-    def set_roll_position(self, pos:ctypes.c_int32,ensure_position=True):
+    def set_roll_position(self, pos:ctypes.c_int32, ensure_position=True):
         """set_roll_position
 
         Args:
@@ -88,10 +88,45 @@ class RotTableComm(object):
                 self.set_yaw_position(pos=pos,ensure_position=False)
                 sleep(2)
 
+    def velocity_roll(self, vel=0, acc=100):
+        # check maximum allowed velocity
+        if abs(vel) > 20000.0:
+            if vel > 0.0:
+                vel = 20000.0
+            else:
+                vel = -20000.0
+            
+        self.write_register(22, 1)
+        self.write_register(24, 1)
+        self.write_register(24, 1)
+    
+    def velocity_yaw(self, vel=0, acc=100):
+        # check maximum allowed velocity
+        if abs(vel) > 50000.0:
+            if vel > 0.0:
+                vel = 50000.0
+            else:
+                vel = -50000.0
+        
+        self.write_register(22, 0)
+        self.write_register(24, 0)
+
+
+        self.write_register(56, abs(vel*100))
+        if vel > 0.0:
+            self.write_register(26, 1)
+        else:
+            self.write_register(26, 2)
+            
+        self.write_register(22, 1)
+        self.write_register(24, 1)
+        
+
     def get_yaw_position(self):
         _pos_list = self.client.read_input_registers(0, 2)
         self.yaw_position = (((_pos_list[1] << 16) + _pos_list[0])) / 1_000_000
         return self.yaw_position
+    
     def get_yaw_velocity(self):
         _pos_list = self.client.read_input_registers(2, 2)
         self.yaw_velocity = (((_pos_list[1] << 16) + _pos_list[0])) / 1_000_000
@@ -106,6 +141,8 @@ class RotTableComm(object):
         _pos_list = self.client.read_input_registers(6, 2)
         self.roll_velocity = (((_pos_list[1] << 16) + _pos_list[0])) / 1_000_000
         return self.roll_velocity
+    
     def go_home(self):
         self.set_roll_position(0)
         self.set_yaw_position(0)
+    
