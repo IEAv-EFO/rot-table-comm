@@ -4,6 +4,10 @@ from time import sleep
 
 class RotTableComm(object):
     """docstring for RotTableComm."""
+    
+    max_acc = 10_000.0
+    max_roll_vel = 20_000.0
+    max_yaw_vel = 50_000.0
 
     def __init__(self, host="192.168.1.1", port=502):
         """__init__ constructor
@@ -22,6 +26,7 @@ class RotTableComm(object):
         # self.get_yaw_position()
         # self.get_yaw_velocity()
 
+
     def write_register(self, address_reg: ctypes.c_int, reg_value: ctypes.c_int16):
         if not self.client.open():
             print('fail to open')
@@ -29,6 +34,52 @@ class RotTableComm(object):
         # sleep(.1)
         self.client.write_single_register(address_reg, reg_value)
         self.client.close()
+
+    def set_roll_acc(self, acc=max_acc):
+        self.write_register(40, acc)
+        self.write_register(42, acc)
+
+    def set_roll_vel(self, vel=0):
+        if abs(vel) > RotTableComm.max_roll_vel:
+            if vel > 0.0:
+                vel = RotTableComm.max_roll_vel
+            else:
+                vel = -RotTableComm.max_roll_vel
+        self.write_register(46, abs(vel*100))
+        if vel > 0.0:
+            self.write_register(26, 1)
+        else:
+            self.write_register(26, 2)
+  
+    def set_yaw_acc(self, acc=max_acc):
+        self.write_register(50, acc)
+        self.write_register(52, acc)
+        
+    def set_yaw_vel(self, vel=0):
+        if abs(vel) > RotTableComm.max_yaw_vel:
+            if vel > 0.0:
+                vel = RotTableComm.max_yaw_vel
+            else:
+                vel = -RotTableComm.max_yaw_vel
+        self.write_register(56, abs(vel*100))
+        if vel > 0.0:
+            self.write_register(26, 1)
+        else:
+            self.write_register(26, 2)
+
+    def stop(self):
+        self.write_register(22, 1)
+        self.write_register(24, 1)
+
+        # stop roll movement
+        self.write_register(26, 0) # roll movement off
+        self.set_roll_acc(RotTableComm.max_acc)
+        self.set_roll_vel(0)
+
+        # stop yaw movement
+        self.write_register(28, 0)
+        self.set_yaw_acc(RotTableComm.max_acc)
+        self.set_yaw_vel(0)
 
     def set_roll_position(self, pos:ctypes.c_int32, ensure_position=True):
         """set_roll_position
@@ -88,35 +139,20 @@ class RotTableComm(object):
                 self.set_yaw_position(pos=pos,ensure_position=False)
                 sleep(2)
 
-    def velocity_roll(self, vel=0, acc=100):
-        # check maximum allowed velocity
-        if abs(vel) > 20000.0:
-            if vel > 0.0:
-                vel = 20000.0
-            else:
-                vel = -20000.0
-            
-        self.write_register(22, 1)
-        self.write_register(24, 1)
-        self.write_register(24, 1)
-    
-    def velocity_yaw(self, vel=0, acc=100):
-        # check maximum allowed velocity
-        if abs(vel) > 50000.0:
-            if vel > 0.0:
-                vel = 50000.0
-            else:
-                vel = -50000.0
-        
+    def velocity_roll(self, vel=0, acc=max_acc):
+        self.set_roll_acc(acc)
         self.write_register(22, 0)
         self.write_register(24, 0)
-
-
-        self.write_register(56, abs(vel*100))
-        if vel > 0.0:
-            self.write_register(26, 1)
-        else:
-            self.write_register(26, 2)
+        self.set_roll_vel(vel)
+        self.write_register(22, 1)
+        self.write_register(24, 1)
+    
+    def velocity_yaw(self, vel=0, acc=max_acc):
+        self.set_yaw_acc(acc)
+        self.write_register(22, 0)
+        self.write_register(24, 0)
+        # check maximum allowed velocity
+        self.set_yaw_vel(vel)
             
         self.write_register(22, 1)
         self.write_register(24, 1)
