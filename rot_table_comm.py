@@ -30,6 +30,14 @@ class RotTableComm(object):
         self.client.write_single_register(address_reg, reg_value)
         self.client.close()
 
+    def write_two_registers(self, address_reg: ctypes.c_int, reg_value: ctypes.c_int16):
+        if not self.client.open():
+            print("fail to open")
+
+        # sleep(.1)
+        self.client.write_single_register(address_reg, reg_value)
+        self.client.close()
+
     def set_roll_position(self, pos:ctypes.c_int32,ensure_position=True):
         """set_roll_position
 
@@ -52,7 +60,7 @@ class RotTableComm(object):
         sleep(0.1)
         self.write_register(address_reg=26, reg_value=4)
         # update position variable
-        
+
         self.roll_position = self.get_roll_position()
         # Check that the table is in the requested position
         if ensure_position:
@@ -109,3 +117,21 @@ class RotTableComm(object):
     def go_home(self):
         self.set_roll_position(0)
         self.set_yaw_position(0)
+    def set_yaw_velocity(self,vel :ctypes.c_int32):
+        vel *= 100_0
+        self.write_register(address_reg=22,reg_value=1)
+        self.write_register(address_reg=24, reg_value=1)
+        self.write_register(address_reg=0, reg_value=28)
+        lower_velocity = -50000
+        upper_velocity = 50000
+        _clipped_vel = max(lower_velocity, min(upper_velocity, vel))
+        _abs_clipped_vel = abs(_clipped_vel)
+        _msb_pos = _abs_clipped_vel >> 16
+        _lsb_pos = _abs_clipped_vel & 0xFFFF
+        self.write_register(address_reg=56, reg_value=_lsb_pos)
+        self.write_register(address_reg=57, reg_value=_msb_pos)
+        if _clipped_vel < 0:
+            # put on reverse mode
+            self.write_register(address_reg=28,reg_value=2)
+        else:
+            self.write_register(address_reg=28, reg_value=1)
