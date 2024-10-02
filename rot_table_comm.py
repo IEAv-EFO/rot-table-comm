@@ -3,7 +3,13 @@ import ctypes
 from time import sleep
 
 class RotTableComm(object):
-    """docstring for RotTableComm."""
+    """
+    Class used to communicate with the Inphax rotary table from IEAv.
+
+    The table's firmware is programmed in a PLC and communicates via modbus protocol, 
+    via ethernel cable.
+    """
+    
 
     def __init__(self, host="192.168.1.1", port=502):
         """__init__ constructor
@@ -12,33 +18,127 @@ class RotTableComm(object):
             host: ip of rot table. Defaults to "192.168.1.1".
             port: port number of connection. Defaults to 502.
         """
+
+        # rotary table fixed values
+        self.max_acc = 10_000
+        self.max_roll_vel = 20_000 
+        self.max_yaw_vel = 50_000
+
+
         self.client = ModbusClient(host=host, port=port)
         if not self.client.open():
-            print("Fail to open connection")
+            print("Connection Failed!")
         self.client.close()
-        # ge current states
-        # self.get_roll_position()
-        # self.get_roll_velocity()
-        # self.get_yaw_position()
-        # self.get_yaw_velocity()
+        return 200
+
+
 
     def write_register(self, address_reg: ctypes.c_int, reg_value: ctypes.c_int16):
         if not self.client.open():
-            print('fail to open')
-
+            print("Connection failed!")
+            
         # sleep(.1)
         self.client.write_single_register(address_reg, reg_value)
         self.client.close()
 
-    def write_two_registers(self, address_reg: ctypes.c_int, reg_value: ctypes.c_int16):
-        if not self.client.open():
-            print("fail to open")
+    # Primary functions
+    # These functions are results from the reverse engineering and tests
+    # on the PLC registers and its possible values.
+    def stop_emergency(self, status=4): # @test
+        """ 0: reset status  4: stop immediately """
+        self.write_register(20, status)
+        sleep(0.1)
+        self.write_register(20, 0)
 
-        # sleep(.1)
-        self.client.write_single_register(address_reg, reg_value)
-        self.client.close()
+    def move_roll(self, status=0): # @test
+        """ 0: off  1: on """
+        self.write_register(22, status)
+    
+    def move_yaw(self, status=0):
+        """ 0: off  1: on """
+        self.write_register(24, status)
 
-    def set_roll_position(self, pos:ctypes.c_int32,ensure_position=True):
+    def set_direction_roll(self, direction=0): # @test value 4
+        """ 0: off  1: positive 2: negative """
+        self.write_register(26, direction)
+
+    def set_direction_yaw(self, direction=0):
+        """ 0: off  1: positive 2: negative """
+        self.write_register(28, direction)
+
+
+
+    def set_roll_vel(self, vel=0):
+        if abs(vel) > self.max_roll_vel:
+            if vel > 0.0:
+                vel = self.max_roll_vel
+            else:
+                vel = -self.max_roll_vel
+        self.write_register(46, abs(vel*100))
+        if vel > 0.0:
+            self.set_direction_roll(1)
+        elif vel < 0.0:
+            self.set_direction_roll(2)
+        else:
+            self.set_direction_roll(0)
+
+
+
+    def set_roll_acc(self, acc=None):
+        if acc is None:
+            acc = self.max_acc
+        self.write_register(40, acc) # roll acceleration
+        self.write_register(42, acc) # maximum roll acceleration
+
+
+        
+    def set_yaw_vel(self, vel=0):
+        if abs(vel) > self.max_yaw_vel:
+            if vel > 0.0:
+                vel = self.max_yaw_vel
+            else:
+                vel = -self.max_yaw_vel
+        self.write_register(56, abs(vel*100))
+        if vel > 0.0:
+            self.set_direction_yaw(1)
+        elif vel <0.0:
+            self.set_direction_yaw(2)
+        else:
+            self.set_direction_yaw(0)
+            
+
+
+    def set_yaw_acc(self, acc=None):
+        if acc is None:
+            acc = self.max_acc
+        self.write_register(50, acc) # yaw acceleration
+        self.write_register(52, acc) # maximum acceleration
+
+
+
+    def stop(self): # @test
+        """
+            Non-emergencial stop.
+        """
+        self.move_roll(1)
+        self.move_yaw(1)
+
+        # stop roll movement
+        self.set_direction_roll(0)
+        self.set_roll_acc(self.max_acc)
+        self.set_roll_vel(0)
+
+        # stop yaw movement
+        self.set_direction_yaw(0)
+        self.set_yaw_acc(self.max_acc)
+        self.set_yaw_vel(0)
+
+        self.move_roll(0)
+        self.move_yaw(0)
+        
+
+
+    def set_roll_position(self, pos:ctypes.c_int32, ensure_position=True):
         """set_roll_position
 
         Args:
@@ -96,10 +196,27 @@ class RotTableComm(object):
                 self.set_yaw_position(pos=pos,ensure_position=False)
                 sleep(2)
 
+    def jog_roll(self, vel=0, acc=None):
+        if acc is None:
+            acc = self.max_acc
+        self.set_roll_vel(vel)
+        self.set_roll_acc(acc)
+        self.move_roll(1)
+
+    
+    def jog_yaw(self, vel=0, acc=None):
+        if acc is None:
+            acc = self.max_acc
+        self.set_yaw_vel(vel)
+        self.set_yaw_acc(acc)
+        self.move_yaw(1)
+        
+
     def get_yaw_position(self):
         _pos_list = self.client.read_input_registers(0, 2)
         self.yaw_position = (((_pos_list[1] << 16) + _pos_list[0])) / 1_000_000
         return self.yaw_position
+    
     def get_yaw_velocity(self):
         _pos_list = self.client.read_input_registers(2, 2)
         self.yaw_velocity = (((_pos_list[1] << 16) + _pos_list[0])) / 1_000_000
@@ -114,9 +231,11 @@ class RotTableComm(object):
         _pos_list = self.client.read_input_registers(6, 2)
         self.roll_velocity = (((_pos_list[1] << 16) + _pos_list[0])) / 1_000_000
         return self.roll_velocity
+    
     def go_home(self):
         self.set_roll_position(0)
         self.set_yaw_position(0)
+    
     def set_yaw_velocity(self,vel :ctypes.c_int32):
         vel *= 100_0
         self.write_register(address_reg=22,reg_value=1)
